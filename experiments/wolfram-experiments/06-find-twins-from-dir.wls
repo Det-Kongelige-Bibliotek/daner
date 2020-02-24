@@ -1,23 +1,27 @@
 #!/home/pmd/wolfram/bin/wolframscript
+(* a lazy man's logger *)
+log[begin_DateObject, s_String]:=Print[
+	"After "<>ToString[Now-begin]<>": "<>s
+];
 begin = Now;
+log[begin,"Here we go: "<>DateString[]]
 
-peopleDir = $ScriptCommandLine[[2]];
-(*peopleDir = FileNameJoin@{$HomeDirectory,"projekter","daner","people-test"}*)
+peopleDir = FileNameJoin@{$HomeDirectory,"itusus"};
+dataDir = "/data/daner/faces";
+featuresFile = "/data/daner/all-features-faces.mx";
+publishDir = FileNameJoin[{$HomeDirectory,"html","daner", "faces"}]
 
-publishDir = FileNameJoin[{$HomeDirectory,"html","daner"}]
-dataDir = "/data/daner/";
+If[Not@DirectoryQ[publishDir],CreateDirectory[publishDir]]
+If[Not@DirectoryQ[publishDir<>"/img"],CreateDirectory[publishDir<>"/img"]]
 
 peopleFiles = FileNames["*.jpg", peopleDir, Infinity];
-imageFiles = FileNames["*.jpg",FileNameJoin@{dataDir,"full_image"},Infinity];
-
-Print["Loaded "<>ToString@Length@peopleFiles<>" portraits."]
-Print["Elapsed time: "<>ToString[Now-begin]];
-
+log[begin, "Loaded "<>ToString@Length@peopleFiles<>" portraits."]
+imageFiles = FileNames["*.jpg",dataDir,Infinity];
+log[begin, "Loaded "<>ToString@Length@imageFiles<>" paths to the faces which to search."]
 
 (* load feature model featuresOfAllPhotos *)
-Get@FileNameJoin[{dataDir, "all-features.mx"}]
-Print["Feature model loaded "]
-Print["Elapsed time: "<>ToString[Now-begin]];
+Get@featuresFile
+log[begin, "Feature model loaded with dimensions "<>ToString[Dimensions[featuresOfAllPhotos]]]
 (* 
    Thread the list of features with the list of image paths 
    to get a list of rules for the nearest feature search.
@@ -26,31 +30,27 @@ Print["Elapsed time: "<>ToString[Now-begin]];
 featureMap = Thread[Rule[featuresOfAllPhotos, imageFiles]];
 
 featureExtractor=NetModel["ResNet-101 Trained on Augmented CASIA-WebFace Data"];
+log[begin, "Model ResNet-101 Trained on Augmented CASIA-WebFace Data loaded."];
 
-(* Reduce the amount of people for which to find a dobbelgänger *)
-(*someKBPeople = RandomChoice[kbPeopleFiles,8];*)
+(* create the search function for nearest image. We want both the index of the nearest and the distance *)
+findNearestPhoto = FeatureNearest[featuresOfAllPhotos -> "Index"];
+log[begin, "Search function loaded."];
 
-(* create a function for finding pseudo twins for a list of portraits *)
-findTwins[featureMap,originals_List] := Map[
-  List[
-     #, 
-     First@FeatureNearest[
-	featureMap, 
-	featureExtractor@Import[#]
-     ]
-  ]&,
-  originals
+(* extract the features of the photos of the subjects *)
+subjectFeatures = featureExtractor@Import[#]&/@peopleFiles;
+log[begin, "Extracted features of "<>ToString@Length@peopleFiles<>" subject photos"];
+
+findTwinsFast[originals_List] := Map[
+  List[#, imageFiles[[First@findNearestPhoto@featureExtractor@Import@#]]]&, originals
 ];
 
 (* find some twins and remember the time it took *)
-Print["Elapsed time: "<>ToString[Now-begin]];
-Print["Begin search for twins. This will take approximate "<>ToString[Quantity[7.5, "Seconds"]*Length@peopleFiles]]
-{time, twins} = AbsoluteTiming[findTwins[featureMap, peopleFiles]];
-Print["Search complete in "<>ToString@time]
-Print["Elapsed time: "<>ToString[Now-begin]];
+log[begin, "Begin search for twins. This will take approximate "<>ToString[Quantity[7.5, "Seconds"]*Length@peopleFiles]]
+{time, twins} = AbsoluteTiming[findTwinsFast[peopleFiles]];
+log[begin, "Search complete in "<>ToString@time]
 
 (* Create an image collage for each pair and export htose into the httpd area. *)
-Print["Create image collages"]
+log[begin, "Create image collages and webpage"]
 twinPairs = Export[
    FileNameJoin[{
       publishDir,
@@ -59,7 +59,7 @@ twinPairs = Export[
    }],
    ImageCollage[{
       Import[#[[1]]],
-      Import[#[[2]]]}]]&/@twins;
+      Import[StringReplace[#[[2]],"faces"->"full_image"]]}]]&/@twins;
 
 
 header = "<html><head/><body>";
@@ -72,6 +72,6 @@ htmlDoc = header<>tableHeader<>table<>tableFooter<>footer
 DeleteFile[FileNameJoin[{publishDir,"index.html"}]]
 WriteString[FileNameJoin[{publishDir,"index.html"}],htmlDoc]
 
-Print["Everything complete"]
-Print["Elapsed time: "<>ToString[Now-begin]];
+log[begin, "Everything complete at "<>ToString@DateString[]]
+
 
