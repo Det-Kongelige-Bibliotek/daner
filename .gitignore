@@ -2,4 +2,6 @@
 .classpath
 .project
 .settings/
-
+/python-experiments/.idea
+/python-experiments/test2/
+/python-experiments/test1/
