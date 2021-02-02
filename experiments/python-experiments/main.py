@@ -9,7 +9,6 @@ import os
 args = {}
 currentdir = os.getcwd()
 args["detector"] = currentdir + '/face_detection_model'
-args["embedding_model"] = currentdir + '/openface_nn4.small2.v1.t7'
 args["embeddings"] = currentdir + '/output/embeddings.pickle'
 #args["dataset"] = '/run/user/1000/gvfs/smb-share:server=nas-01.kb.dk,share=faelles2/IT/ITU/daner/portraits'
 #args["destination"] = '/run/user/1000/gvfs/smb-share:server=nas-01.kb.dk,share=faelles2/IT/ITU/daner/face2/'
@@ -22,10 +21,6 @@ print("[INFO] loading face detector...")
 protoPath = os.path.sep.join([args["detector"], "deploy.prototxt"])
 modelPath = os.path.sep.join([args["detector"], "res10_300x300_ssd_iter_140000.caffemodel"])
 detector = cv2.dnn.readNetFromCaffe(protoPath, modelPath)
-
-# load our serialized face embedding model from disk
-print("[INFO] loading face recognizer...")
-embedder = cv2.dnn.readNetFromTorch(args["embedding_model"])
 
 # grab the paths to the input images in our dataset
 print("[INFO] quantifying faces...")
