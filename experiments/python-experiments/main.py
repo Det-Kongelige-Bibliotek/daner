@@ -71,8 +71,23 @@ for (i, imagePath) in enumerate(imagePaths):
                 # change the width and height to 70% of the found face and make it square
                 Y70 = int((endY - startY) * .2)
                 X70 = int((((endY + Y70) - (startY - Y70)) - (endX - startX)) / 2)
-                face = image[startY - Y70:endY + Y70, startX - X70:endX + X70]
+
+                # Checks if one of the corners are negative then makes it shrink from both side
+                if startY - Y70 < 0:
+                    endY = endY + Y70 + startY
+                    startY = 0
+                else:
+                    startY = startY - Y70
+                    endY = endY + Y70
+                if startX - X70 < 0:
+                    endX = endX + X70 + startX
+                    startX = 0
+                else:
+                    startX = startX - X70
+                    endX = endX + X70
+                face = image[startY:endY, startX:endX]
 
                 # change the aspect ratio to 256 * 256
                 face = cv2.resize(face, (256, 256))
                 cv2.imwrite(destination, face)
+
